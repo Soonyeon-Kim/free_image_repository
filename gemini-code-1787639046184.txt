@@ -1,0 +1,50 @@
+SELECT 
+    -- 1. 손님자산관리활동ID (등록일자 기반 ID)
+    RAND_RGST_DT || LPAD(LEVEL, 4, '0')                     AS GUST_ASST_MNGM_ACT_ID,
+    
+    -- 2. 손님자산관리활동ID명
+    '[모니터링] 대응활동 점검건_' || LEVEL                  AS GUST_ASST_MNGN_ACT_ID_NM,
+    
+    -- 3~4. 모니터링기간 (등록월 기준 1일~말일)
+    SUBSTR(RAND_RGST_DT, 1, 6) || '01'                      AS MMTG_PRD_STRT_DT,
+    TO_CHAR(LAST_DAY(TO_DATE(RAND_RGST_DT, 'YYYYMMDD')), 'YYYYMMDD') AS MMTG_PRD_END_DT,
+    
+    -- 5~8. 부점 및 담당자, 등록 정보
+    '21037'                                                 AS CHRG_BDCD,
+    '00' || LPAD(TRUNC(DBMS_RANDOM.VALUE(1000, 9999)), 5, '0') AS CHRR_EMPNO,
+    '21037'                                                 AS RGST_BDCD,
+    RAND_RGST_DT                                            AS RGST_DT,                     -- 2025-01-01 ~ 어제 중 무작위
+    
+    -- 9. 관리활동상태상세구분코드 (11, 21, 31, 41, 51, 61, 91 중 무작위)
+    CASE TRUNC(DBMS_RANDOM.VALUE(1, 8))
+        WHEN 1 THEN '11'  -- 관리활동요청중
+        WHEN 2 THEN '21'
+        WHEN 3 THEN '31'
+        WHEN 4 THEN '41'  -- 완료
+        WHEN 5 THEN '51'
+        WHEN 6 THEN '61'
+        ELSE '91'         -- 취소
+    END                                                     AS MNGM_ACT_STTS_DETL_DCD,
+    
+    -- 10~11. 상태변경일자 및 처리기한일자 (등록일 + N일)
+    TO_CHAR(TO_DATE(RAND_RGST_DT, 'YYYYMMDD') + 2, 'YYYYMMDD') AS MNGM_ACT_STTS_CHNG_DT,
+    TO_CHAR(TO_DATE(RAND_RGST_DT, 'YYYYMMDD') + 7, 'YYYYMMDD') AS PRCS_TLMT_DT,
+    
+    -- 12~13. 연장 관련 정보
+    CAST(NULL AS VARCHAR2(8))                               AS XTNS_TLMT_DT,
+    CAST(NULL AS VARCHAR2(1))                               AS TLMT_XTNS_APVL_STTS_DCD,
+    
+    -- 14. 손님자산모니터링위험등급구분코드 (01, 02, 03 중 무작위)
+    LPAD(TRUNC(DBMS_RANDOM.VALUE(1, 4)), 2, '0')           AS GUST_ASST_MMTG_RSK_GRD_DCD
+FROM (
+    SELECT 
+        -- 20250101부터 어제(SYSDATE-1) 사이의 무작위 날짜 생성
+        TO_CHAR(
+            TO_DATE('20250101', 'YYYYMMDD') + 
+            TRUNC(DBMS_RANDOM.VALUE(0, TRUNC(SYSDATE - 1) - TO_DATE('20250101', 'YYYYMMDD') + 1)),
+            'YYYYMMDD'
+        ) AS RAND_RGST_DT,
+        LEVEL
+    FROM DUAL
+    CONNECT BY LEVEL <= 20  -- 필요시 원하는 데이터 건수로 변경 가능
+);
